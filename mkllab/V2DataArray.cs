@@ -15,6 +15,7 @@ namespace mkllab
         int position = -1;
         public double[] x { get; set; }
         public double[,] field { get; set; }
+        public FValues f {  get; set; }
         public V2DataArray(string key, DateTime date) : base(key, date)
         {
             this.x = new double[0];
@@ -23,6 +24,7 @@ namespace mkllab
         }
         public V2DataArray(string key, DateTime date, double[] x, FValues F) : base(key, date)
         {
+            f = F;
             this.x = (double[])x.Clone();
      
             this.field = new double[2, x.Length];
@@ -33,6 +35,7 @@ namespace mkllab
         }
         public V2DataArray(string key, DateTime date, int nX, double xL, double xR, FValues F) : base(key, date)
         {
+            f = F;
             this.x = new double[nX];
             this.field = new double[2, x.Length];
             for (int i = 0; i < nX; i++)

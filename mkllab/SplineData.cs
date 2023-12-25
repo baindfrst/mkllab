@@ -29,15 +29,28 @@ namespace mkllab
 
         public int CallSpline()
         {
-            double[] splinerez = new double[m];
+            double[] splinerez = new double[m * 3];
             int numEter = 0;
 
-            stopCode = CubicSpline(m, DataArray.x, 1, DataArray[0],splinerez);
+            double[] y = new double[DataArray.x.Length];
+            for (int i = 0; i < m; i++)
+            {
+                y[i] = DataArray.field[0,i];
+            }
+            double[] x = new double[DataArray.x.Length];
+            for (int i = 0; i < m; i++)
+            {
+                x[i] = DataArray.x[i];
+            }
+            stopCode = CubicSpline(DataArray.x.Length, x, 1, y, m, x[0], x[DataArray.x.Length - 1],splinerez);
+            Console.WriteLine($"производная начала: {splinerez[2]}, производная в конце: {splinerez[splinerez.Length - 1]}");
             minNevuaz = 0;
             for (int i = 0; i < m; i++)
             {
                 minNevuaz += (splinerez[i] - DataArray.field[0, i]) * (splinerez[i] - DataArray.field[0, i]);
-                SplineProxRezult.Add(new SplineDataItem(DataArray.x[i], DataArray.field[0, i], splinerez[i]));
+                SplineProxRezult.Add(new SplineDataItem(DataArray.x[i], y[i], splinerez[i*3]));
+                Console.WriteLine(DataArray.x[i]);
+                Console.WriteLine(splinerez[i*3]);
             }
             double[] eps =
             {
@@ -48,7 +61,6 @@ namespace mkllab
                 1.0E-12,
                 1.0E-12,
             };
-            USRFCNXD del = func;
             double jac_eps = 1.0E-8;
             double res_initial = 0;
             double res_final = 0;
@@ -56,47 +68,47 @@ namespace mkllab
             int[] check_data_info = new int[4];
             int iter_count = 0;
             int error_code = 0;
-            bool fin = TrustRegion(m, m, DataArray.x, DataArray[0], eps, jac_eps, maxCountIter, maxCountIter, 100, ref iter_count, ref res_initial, ref res_final, ref stop_criteria, check_data_info, ref error_code, del);
-            Console.WriteLine(error_code); Console.WriteLine(stop_criteria);
-            Console.WriteLine(res_initial); Console.WriteLine(res_final);
+            int Nx = DataArray.x.Length;
+            bool fin = TrustRegion(
+                Nx,
+                m,
+                x,
+                y,
+                eps,
+                jac_eps,
+                maxCountIter,
+                maxCountIter,
+                10,
+                ref iter_count,
+                ref res_initial,
+                ref res_final,
+                ref stop_criteria,
+                check_data_info,
+                ref error_code);
+            
+            Console.WriteLine("________________");
             minNevuaz = res_final;
             CountEter = iter_count;
+            stopCode = stop_criteria;
+            Console.WriteLine(minNevuaz);
+            Console.WriteLine(DataArray);
+            Console.WriteLine(DataArray.ToLongString("0.000"));
+            Console.WriteLine("oas");
             return 0;
         }
 
         [DllImport("..\\..\\..\\..\\x64\\DEBUG\\Dll1.dll",
         CallingConvention = CallingConvention.Cdecl)]
-        public static extern int CubicSpline(int nX, double[] X, int nY, double[] Y, double[] splineValues);
+        public static extern int CubicSpline(int nX, double[] X, int nY, double[] Y, int Sn, double Lx, double Rx, double[] splineValues);
         [DllImport("..\\..\\..\\..\\x64\\DEBUG\\Dll1.dll",
         CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool TrustRegion(
-        int n, // число независимых переменных
-        int m, // число компонент векторной функции
-        double[] x, // начальное приближение и решение
-        double[] y, //значения поля У
-        double[] eps, // массив с 6 элементами, определяющих критерии
-        // остановки итерационного процесса
-        double jac_eps, // точность вычисления элементов матрицы Якоби
-        int niter1, // максимальное число итераций
-        int niter2, // максимальное число итераций при выборе пробного шага
-
-        double rs, // начальный размер доверительной области
-        ref int ndoneIter, // число выполненных итераций
-        ref double resInitial, // начальное значение невязки
-        ref double resFinal, // финальное значение невязки
-        ref int stopCriteria,// выполненный критерий остановки
-        int[] checkInfo, // информация об ошибках при проверке данных
-        ref int error,  // информация об ошибках
-        USRFCNXD funcinp); // функция для Якоби
-
-        //    public static extern bool TrustRegion(
+        //public static extern bool TrustRegion(
         //int n, // число независимых переменных
         //int m, // число компонент векторной функции
         //double[] x, // начальное приближение и решение
-        //USRFCND FValues, // указатель на функцию, вычисляющую векторную
-        //                 // функцию в заданной точке
+        //double[] y, //значения поля У
         //double[] eps, // массив с 6 элементами, определяющих критерии
-        //              // остановки итерационного процесса
+        //// остановки итерационного процесса
         //double jac_eps, // точность вычисления элементов матрицы Якоби
         //int niter1, // максимальное число итераций
         //int niter2, // максимальное число итераций при выборе пробного шага
@@ -107,8 +119,29 @@ namespace mkllab
         //ref double resFinal, // финальное значение невязки
         //ref int stopCriteria,// выполненный критерий остановки
         //int[] checkInfo, // информация об ошибках при проверке данных
+        //ref int error,  // информация об ошибках
+        //USRFCNXD funcinp); // функция для Якоби
 
-        //ref int error); // информация об ошибках
+        public static extern bool TrustRegion(
+        int n, // число независимых переменных
+        int m, // число компонент векторной функции
+        double[] x, // начальное приближение и решение
+        double[] y,
+        double[] eps, // массив с 6 элементами, определяющих критерии
+                      // остановки итерационного процесса
+        double jac_eps, // точность вычисления элементов матрицы Якоби
+        int niter1, // максимальное число итераций
+        int niter2, // максимальное число итераций при выборе пробного шага
+
+        double rs, // начальный размер доверительной области
+        ref int ndoneIter, // число выполненных итераций
+        ref double resInitial, // начальное значение невязки
+        ref double resFinal, // финальное значение невязки
+        ref int stopCriteria,// выполненный критерий остановки
+        int[] checkInfo, // информация об ошибках при проверке данных
+
+        ref int error); // информация об ошибках
+
 
 
 
@@ -124,13 +157,6 @@ namespace mkllab
             ret += $"\nStopCode = {stopCode}";
             ret += $"\n CountEter = {CountEter}";
             return ret;
-        }
-        static void func(int m, int n, double[] x, double[] f, double[] y)
-        {
-            for (int i = 0; i < 0; i++)
-            {
-                f[i] = y[i];
-            }
         }
     }
 }
