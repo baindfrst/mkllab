@@ -5,15 +5,11 @@ internal class main
     static void Main(string[] args)
     {
         FValues rez = func;
-        V2DataArray testArray = new V2DataArray("key", DateTime.Now, 8, -5, 5, rez);
-        for(int i = 0; i < 8; i++)
-        {
-            Console.WriteLine(testArray.field[0, i]);
-        }
-        SplineData splines = new SplineData(testArray, 8, 10);
+        V2DataArray testArray = new V2DataArray("key", DateTime.Now, 3, -5, 5, rez);
+        SplineData splines = new SplineData(testArray, 5, 100);
         int inter = splines.CallSpline();
-        Console.WriteLine("))))))))))))))))))))))))))))))))))))))))))))))))0");
         Console.WriteLine(splines.ToLongString("0.000"));
+        splines.Save("out.txt", "0.000");
     }
     static void func(double x, ref double y1, ref double y2)
     {

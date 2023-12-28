@@ -40,7 +40,7 @@ namespace mkllab
             this.field = new double[2, x.Length];
             for (int i = 0; i < nX; i++)
             {
-                x[i] = xL + ((xR - xL) / nX) * i;
+                x[i] = xL + ((xR - xL) / (nX - 1)) * i;
                 F(x[i], ref this.field[0, i], ref this.field[1, i]);
             }
         }
