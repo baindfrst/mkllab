@@ -1,0 +1,21 @@
+﻿<Window x:Class="Wpfdop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Wpfdop"
+        mc:Ignorable="d"
+        Title="MainWindow" Height="450" Width="800" Loaded="Window_Loaded">
+    <Window.Resources>
+        <DataTemplate x:Key="myTemplate">
+            <StackPanel>
+                <TextBlock/>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
+    <Grid>
+        <ListBox x:Name = "MyListBox" Margin="0,10,427,0" ItemsSource="{Binding}" />
+        <TextBlock x:Name= "MyTextBlock" Text="{Binding ElementName=MyListBox, Path=SelectedItem.thisClassInString}" HorizontalAlignment="Left" Margin="466,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="334" Height="424" />
+
+    </Grid> 
+</Window>

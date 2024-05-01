@@ -1,6 +1,8 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -8,128 +10,132 @@ using System.Threading.Tasks;
 
 namespace mkllab
 {
-    internal class SplineData
+    public class SplineData
     {
-        V2DataArray DataArray { get; set; }
-        int m { get; set; }
-        double[] arraySpline { get; set; }
-        int maxCountIter { get; set; }
-        int stopCode { get; set; }
-        double minNevuaz { get; set; }
+        public V2DataArray Data { get; }
+        public List<double[]> Ysplines { get; }
+        public int M { get; }
+        public double[] YSpline { get; }
+        public int MaxIter { get; }
+        public int Status { get; set; }
+        public double MinRes { get; set; }
+        public int Msmall { get; set; }
+        public List<SplineDataItem> SplineProxRezult { get; }
+        public int CountIter { get; set; }
 
-        int CountEter {  get; set; }
-        List<SplineDataItem> SplineProxRezult { get; set; }
-
-        public SplineData(V2DataArray DataArray, int count_m, int countIter) {
-            this.DataArray = DataArray;
-            this.m = count_m;
-            this.maxCountIter = countIter;
-            this.SplineProxRezult = new List<SplineDataItem>();
-        }
-
-        public int CallSpline()
+        public SplineData(V2DataArray data, int m, int maxIter, double MinREs, int Msmall)
         {
-            double[] splinerez = new double[m * 3];
-
-            double[] y = new double[DataArray.x.Length];
-            for (int i = 0; i < DataArray.x.Length; i++)
-            {
-                y[i] = DataArray.field[0,i];
-            }
-            double[] x = new double[DataArray.x.Length];
-            for (int i = 0; i < DataArray.x.Length; i++)
-            {
-                x[i] = DataArray.x[i];
-            }
-            stopCode = CubicSpline(DataArray.x.Length, x, 1, y, m,splinerez);
-            Console.WriteLine($"производная начала: {splinerez[2]}, производная в конце: {splinerez[m* 3 - 1]}");
-            double y2 = 0;
-            for (int i = 0; i < m; i++)
-            {
-                double y1 = 0;
-                DataArray.f(DataArray.x[0] + ((DataArray.x[DataArray.x.Length - 1] - DataArray.x[0]) / (m - 1)) * i, ref y1, ref y2);
-                SplineProxRezult.Add(new SplineDataItem(DataArray.x[0] + ((DataArray.x[DataArray.x.Length - 1] - DataArray.x[0]) /(m-1)) * i, y1, splinerez[i*3]));
-            }
-            double[] eps =
-            {
-                1.0E-12,
-                1.0E-12,
-                1.0E-12,
-                1.0E-12,
-                1.0E-12,
-                1.0E-12,
-            };
-            double jac_eps = 1.0E-8;
-            double res_initial = 0;
-            double res_final = 0;
-            int stop_criteria = 0;
-            int[] check_data_info = new int[4];
-            int iter_count = 0;
-            int error_code = 0;
-            int Nx = DataArray.x.Length;
-            bool fin = TrustRegion(
-                Nx,
-                m,
-                x,
-                y,
-                DataArray.f,
-                eps,
-                jac_eps,
-                maxCountIter,
-                maxCountIter/10,
-                1,
-                ref iter_count,
-                ref res_initial,
-                ref res_final,
-                ref stop_criteria,
-                check_data_info,
-                ref error_code);
-            
-            Console.WriteLine("________________");
-            minNevuaz = res_final;
-            CountEter = iter_count;
-            stopCode = stop_criteria;
-            return 0;
+            MinRes = MinREs;
+            this.Msmall = Msmall;
+            Ysplines = new List<double[]>();
+            SplineProxRezult = new List<SplineDataItem>();
+            Data = data;
+            M = m;
+            YSpline = new double[data.x.Length];
+            Status = 0;
+            MaxIter = maxIter;
+            CountIter = 0;
         }
+      
+        public void CallSpline()
+        {
+            try
+            {
+                int countIter = 0;
+                int status = 0;
+                double minRes = MinRes;
+                double[] y = new double[Data.x.Length];
+                for (int i = 0; i != Data.x.Length; i++)
+                {
+                    y[i] = Data.field[0, i];
+                }
+                int ret = CubicSpline(Data.x.Length,
+                                      M,
+                                      MaxIter,
+                                      Data.x,
+                                      y,
+                                      YSpline,
+                                      ref minRes,
+                                      ref countIter,
+                                      ref status);
+                CountIter = countIter;
+                Status = status;
+                MinRes = minRes;
+                double[] x_sup = new double[Msmall+5];
+                double[] y_sup = new double[Msmall+5];
+                for (int i = 0; i != Data.x.Length; i++)
+                {
+                    SplineProxRezult.Add(new SplineDataItem(Data.x[i], y[i], YSpline[i]));
+                }
+                for(int i = 0; i != Msmall+5; i++)
+                {
+                    double ns = 0;
+                    x_sup[i] = Data.x[0] + ((Data.x[Data.x.Length - 1] - Data.x[0]) / (Msmall - 1)) * i;
+                    Data.f(x_sup[i], ref y_sup[i], ref ns);
+                }
+                double[] Y_res_out = new double[Msmall*3];
+                ret = CubicSplineSupport(Data.x.Length,
+                                      Data.x,
+                                      1,
+                                      YSpline,
+                                      Msmall,
+                                      Data.typemesh,
+                                      Y_res_out);
+                for (int i = 0; i != Msmall*3; i++)
+                {
+                    Debug.WriteLine(Y_res_out[i]);
+                }
+                for (int i = 0; i != Msmall; i++)
+                {
+                    double[] elem = new double[2];
+                    elem[0] = x_sup[i];
+                    elem[1] = Y_res_out[i*3];
+                    Ysplines.Add(elem);
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Func Save. Exception: {ex.Message}\n");
+            }
+        }
+        [DllImport("..\\..\\..\\..\\x64\\DEBUG\\Dll1.dll",
+        CallingConvention = CallingConvention.Cdecl)]
+        public static extern int CubicSplineSupport(
+            int nX, // число узлов сплайна
+
+            double[] X, // массив узлов сплайна
+
+            int nY, // размерность векторной функции
+
+            double[] Y,// массив заданных значений векторной функции
+
+            int Sn,
+
+            bool type,
+
+            double[] splineValues); // массив вычисленных значений сплайна и производных
 
         [DllImport("..\\..\\..\\..\\x64\\DEBUG\\Dll1.dll",
         CallingConvention = CallingConvention.Cdecl)]
-        public static extern int CubicSpline(int nX, double[] X, int nY, double[] Y, int Sn, double[] splineValues);
-        [DllImport("..\\..\\..\\..\\x64\\DEBUG\\Dll1.dll",
-        CallingConvention = CallingConvention.Cdecl)]
-        public static extern bool TrustRegion(
-        int n, // число независимых переменных
-        int m, // число компонент векторной функции
-        double[] x, // начальное приближение и решение
-        double[] y,
-        FValues funcY,
-        double[] eps, // массив с 6 элементами, определяющих критерии
-                      // остановки итерационного процесса
-        double jac_eps, // точность вычисления элементов матрицы Якоби
-        int niter1, // максимальное число итераций
-        int niter2, // максимальное число итераций при выборе пробного шага
-
-        double rs, // начальный размер доверительной области
-        ref int ndoneIter, // число выполненных итераций
-        ref double resInitial, // начальное значение невязки
-        ref double resFinal, // финальное значение невязки
-        ref int stopCriteria,// выполненный критерий остановки
-        int[] checkInfo, // информация об ошибках при проверке данных
-
-        ref int error); // информация об ошибках
-
-
+        public static extern
+        int CubicSpline(
+            int nX, int m, int maxIter,
+            double[] X, double[] Y,
+            double[] YSpline, ref double minRes, ref int countIter,
+            ref int status);
         public string ToLongString(string format)
         {
-            string ret = DataArray.ToLongString(format) + "\n";
+            string ret = Data.ToLongString(format) + "\n";
+            ret += "spline out: \n";
             for (int i = 0; i < SplineProxRezult.Count; i++)
             {
                 ret += SplineProxRezult[i].ToLongString(format) + "\n";
             }
             ret += '\n';
-            ret += $"minNev =  {minNevuaz}";
-            ret += $"\nStopCode = {stopCode}";
-            ret += $"\n CountEter = {CountEter}";
+            ret += $"minNev =  {MinRes}";
+            ret += $"\nStopCode = {Status}";
+            ret += $"\n CountEter = {CountIter}";
             return ret;
         }
         public void Save(string file, string format)

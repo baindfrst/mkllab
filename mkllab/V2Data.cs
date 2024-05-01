@@ -8,12 +8,12 @@ using System.Threading.Tasks;
 
 namespace mkllab
 {
-    abstract class V2Data : IEnumerable<DataItem>
+    public abstract class V2Data : IEnumerable<DataItem>
     {
         public string objectKey { get; set; }
         public DateTime timeData { get; set; }
 
-        abstract public DataItem xMaxItem { get; }
+        public abstract DataItem xMaxItem { get; }
 
         public V2Data(string objectKey, DateTime timeData)
         {

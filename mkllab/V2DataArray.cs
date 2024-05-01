@@ -10,19 +10,24 @@ using System.Text.Json;
 
 namespace mkllab
 {
-    internal class V2DataArray : V2Data
+    public delegate void FValues(double x, ref double y1, ref double y2);
+    public class V2DataArray : V2Data
     {
         int position = -1;
         public double[] x { get; set; }
         public double[,] field { get; set; }
         public FValues f {  get; set; }
+        public string fonstr { get; set; }
+        public bool typemesh { get; set; }
+        public string thisClassInString {  get { return this.ToLongString("f4"); } set { } }
+
         public V2DataArray(string key, DateTime date) : base(key, date)
         {
             this.x = new double[0];
             this.field = new double[2, 0];
 
         }
-        public V2DataArray(string key, DateTime date, double[] x, FValues F) : base(key, date)
+        public V2DataArray(string key, DateTime date, double[] x, FValues F, string fonstr) : base(key, date)
         {
             f = F;
             this.x = (double[])x.Clone();
@@ -32,8 +37,10 @@ namespace mkllab
             {
                 F(x[i], ref this.field[0, i], ref this.field[1, i]);
             }
+            this.fonstr = fonstr;
+            this.typemesh = false;
         }
-        public V2DataArray(string key, DateTime date, int nX, double xL, double xR, FValues F) : base(key, date)
+        public V2DataArray(string key, DateTime date, int nX, double xL, double xR, FValues F, string fonstr) : base(key, date)
         {
             f = F;
             this.x = new double[nX];
@@ -43,6 +50,8 @@ namespace mkllab
                 x[i] = xL + ((xR - xL) / (nX - 1)) * i;
                 F(x[i], ref this.field[0, i], ref this.field[1, i]);
             }
+            this.fonstr = fonstr;
+            this.typemesh = true;
         }
         public double[] this[int index] 
         {
@@ -132,6 +141,8 @@ namespace mkllab
                     filestream.WriteLine(this.field[0, i]);
                     filestream.WriteLine(this.field[1, i]);
                 }
+                filestream.WriteLine(this.fonstr);
+                filestream.WriteLine(this.typemesh);
                 filestream.Close();
             } 
 
@@ -163,6 +174,8 @@ namespace mkllab
                     obj.field[0, i] = Convert.ToDouble(streamfile.ReadLine());
                     obj.field[1, i] = Convert.ToDouble(streamfile.ReadLine());
                 }
+                obj.fonstr = streamfile.ReadLine();
+                obj.typemesh = Convert.ToBoolean(streamfile.ReadLine());
             }
             catch (Exception e)
             {

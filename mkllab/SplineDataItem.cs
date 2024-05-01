@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace mkllab
 {
-    internal struct SplineDataItem
+    public class SplineDataItem
     {
         public double X {  get; set; }
         public double Y { get; set; }
@@ -23,7 +23,7 @@ namespace mkllab
             return $"X: {X.ToString(format)}, Y: {Y.ToString(format)}, Y Spline: {Y_spline.ToString(format)}";
         }
         public override string ToString() { 
-        return X.ToString() + " " + Y.ToString() + " " + Y_spline.ToString();
+        return "X: " + X.ToString("0.000") + " Y: " + Y.ToString("0.000") + " Y_Spline: " + Y_spline.ToString("0.000");
                 }
     }
 }

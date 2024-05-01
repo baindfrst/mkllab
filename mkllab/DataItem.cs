@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace mkllab
 {
-    struct DataItem
+    public class DataItem
     {
         public double x { get; set; }
         public double[] doubles { get; set; }
